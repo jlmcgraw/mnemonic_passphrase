@@ -1,14 +1,16 @@
 A utility to generate an easily rememberable passphrase using a random word as a mnemonic
 
-Installation:
-    Windows
+# Installation:
+
+### Windows
         - Get and install Strawberry perl (http://strawberryperl.com/)
         - run setup.bat to install Carton and update local libraries
 
-    Linux
+### Linux
         ./setup.sh to install Carton and update local libraries
-    
-Usage:
+
+# Usage:
+
     # Choose a random word to use as the mnemonic, default length is 5
     ./mnemonic_passwords.pl
         Random mnemonic word of length 5 is "crush"
