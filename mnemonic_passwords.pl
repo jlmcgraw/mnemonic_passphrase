@@ -30,7 +30,6 @@
 #   Handle case where word list doesn't have a word starting with certain character
 #   Add capitol letters, special character, and numbers when requested
 
-
 # Standard libraries
 use strict;
 use warnings;
@@ -69,9 +68,7 @@ sub main {
     my $should_include_numbers = $args->numbers;
     my $should_include_special = $args->special;
 
-
-
-    # Default minimum and maximum word lengths, these will be adjusted 
+    # Default minimum and maximum word lengths, these will be adjusted
     # dynamically per wordfile
     my $min_word_length = 50;
     my $max_word_length = 1;
@@ -82,11 +79,12 @@ sub main {
 
     # Open the word list as UTF8
     open my $fh, '<:encoding(UTF-8)', $word_list_file
-      or die "Cannot open $word_list_file: $!";
+        or die "Cannot open $word_list_file: $!";
 
     # For each line of the word list file
     # (each line should contain only one word)
     while ( my $word = <$fh> ) {
+
         # Trim off leading/trailing whitespace
         $word =~ s/^\s+|\s+$//g;
 
@@ -94,7 +92,8 @@ sub main {
         # Make sure word only has alphanumeric in it
         if ( $word =~ m/[^\w\s]/ ) {
             if ($verbose) {
-                say "Not adding $word because it has non-alphanumeric characters in it";
+                say
+                    "Not adding $word because it has non-alphanumeric characters in it";
             }
             next;
         }
@@ -110,10 +109,10 @@ sub main {
         if ( $word_length > $max_word_length ) {
             $max_word_length = $word_length;
         }
-        
+
         # Increment our count of words
-        $word_count+=1;
-        
+        $word_count += 1;
+
         # Save word in a hash of arrays indexed by word length in graphemes
         push( @{ $words_by_length{$word_length} }, $word );
 
@@ -121,7 +120,7 @@ sub main {
         push( @{ $words_by_first_grapheme{$first_grapheme} }, $word );
 
     }
-    
+
     # More info if verbosity requested
     if ($verbose) {
 
@@ -129,7 +128,7 @@ sub main {
         say "Word count: $word_count";
         say "Requested mnemonic length: $length";
         say "---------";
-    
+
         # Dump the hash of words sorted by length
         foreach my $key ( sort { $a <=> $b } keys %words_by_length ) {
             say "Words of length $key are:";
@@ -150,7 +149,7 @@ sub main {
     # Make sure requested word length is valid for this word list
     unless ( $min_word_length <= $length && $length <= $max_word_length ) {
         say
-          "For the word list \"$word_list_file\:, the length must be between $min_word_length and $max_word_length";
+            "For the word list \"$word_list_file\:, the length must be between $min_word_length and $max_word_length";
         $ap->print_usage;
         return 1;
     }
@@ -161,8 +160,8 @@ sub main {
     }
     else {
         # Get a random word from the array of words of length "length"
-        $mnemonic =
-          @{ $words_by_length{$length} }[ rand @{ $words_by_length{$length} } ];
+        $mnemonic = @{ $words_by_length{$length} }
+            [ rand @{ $words_by_length{$length} } ];
 
         say "Random mnemonic word of length $length is \"$mnemonic\"";
     }
@@ -179,10 +178,10 @@ sub main {
         # Find a random word that starts with that grapheme
         if ( exists $words_by_first_grapheme{$grapheme} ) {
             $mnemonic_word = @{ $words_by_first_grapheme{$grapheme} }
-              [ rand @{ $words_by_first_grapheme{$grapheme} } ];
+                [ rand @{ $words_by_first_grapheme{$grapheme} } ];
         }
 
-        # If we don't have a word that starts with this grapheme just use the grapheme
+# If we don't have a word that starts with this grapheme just use the grapheme
         else {
             say "No word starting with |$grapheme|" if $verbose;
             $mnemonic_word = $grapheme;
@@ -205,7 +204,8 @@ sub main {
 
     # Tack some special characters on end if requested
     if ($should_include_special) {
-        my $specials = generate_random_specials_string($should_include_special);
+        my $specials
+            = generate_random_specials_string($should_include_special);
         push( @passphrase_array, $specials );
     }
 
@@ -251,28 +251,58 @@ sub process_command_line {
     # Set up an argument parser
     my $ap = Getopt::ArgParse->new_parser(
         description => 'Create passphrases using mnemonics',
-        epilog      => 'Copyright (C) 2018  Jesse McGraw (jlmcgraw@gmail.com)',
+        epilog => 'Copyright (C) 2018  Jesse McGraw (jlmcgraw@gmail.com)',
     );
 
     # Add an option
-    $ap->add_arg( '--mnemonic', '-m',help =>'Supply your own mnemonic word instead of choosing one randomly' );
+    $ap->add_arg( '--mnemonic', '-m',
+        help =>
+            'Supply your own mnemonic word instead of choosing one randomly'
+    );
 
     # Add an option
-    $ap->add_arg( '--wordlist', '-w', default => 'eff_large_wordlist.txt', help => 'The word list to use, one word per line' );
+    $ap->add_arg(
+        '--wordlist', '-w',
+        default => 'eff_large_wordlist.txt',
+        help    => 'The word list to use, one word per line'
+    );
 
     # Add an option
-    $ap->add_arg( '--length', '-l', default => '5', help =>'The length of the mnemonic word' );
+    $ap->add_arg(
+        '--length', '-l',
+        default => '5',
+        help    => 'The length of the mnemonic word'
+    );
 
     # Add an option
-    $ap->add_arg( '--capitalize', '-c', type => 'Bool', help =>'Capitalize the first character of each word in the passphrase' );
+    $ap->add_arg(
+        '--capitalize', '-c',
+        type => 'Bool',
+        help =>
+            'Capitalize the first character of each word in the passphrase'
+    );
 
     # Add an option
-    $ap->add_arg( '--numbers', '-n', default => '0', help =>'Add random string of this length of numbers to end of passphrase' );
+    $ap->add_arg(
+        '--numbers', '-n',
+        default => '0',
+        help =>
+            'Add random string of this length of numbers to end of passphrase'
+    );
 
     # Add an option
-    $ap->add_arg( '--special', '-s', default => '0', help =>'Add random string of this length of special characters to end of passphrase' );
+    $ap->add_arg(
+        '--special', '-s',
+        default => '0',
+        help =>
+            'Add random string of this length of special characters to end of passphrase'
+    );
 
-    $ap->add_arg( '--verbose', '-v', type => 'Bool', help =>'Output more information' );
+    $ap->add_arg(
+        '--verbose', '-v',
+        type => 'Bool',
+        help => 'Output more information'
+    );
 
     # Parse the arguments
     my $args = $ap->parse_args() or $ap->print_usage;
