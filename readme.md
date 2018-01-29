@@ -36,7 +36,6 @@ but since I'm not a cryptographic expert I'm not sure of the best way to do this
         It has 143 bits of entropy and 13898717.36 quintillion possible combinations of words and symbols
         (For comparison, xkcd passphrase "correct battery horse staple" would have 99 bits of entropy)
         At 1.00 billion attempts per second it would take 4407.25 centuries to brute force
-        e
 
     # Supply your own mnemonic word
     ./mnemonic_passwords.pl --mnemonic google
