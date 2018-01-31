@@ -62,13 +62,13 @@ sub main {
     my ( $ap, $args, @ARGV ) = process_command_line();
 
     # Get parameter values
-    my $mnemonic               = $args->mnemonic;
-    my $word_list_file         = $args->wordlist;
-    my $length                 = $args->length;
-    my $verbose                = $args->verbose;
-    my $should_capitalize      = $args->capitalize;
-    my $should_include_numbers = $args->numbers;
-    my $should_include_special = $args->special;
+    my $mnemonic                = $args->mnemonic;
+    my $word_list_file          = $args->wordlist;
+    my $length                  = $args->length;
+    my $verbose                 = $args->verbose;
+    my $should_include_capitals = $args->capitalize;
+    my $should_include_numbers  = $args->numbers;
+    my $should_include_special  = $args->special;
 
     # Default minimum and maximum word lengths, these will be adjusted
     # dynamically per wordfile
@@ -81,7 +81,7 @@ sub main {
 
     # Open the word list as UTF8
     open my $fh, '<:encoding(UTF-8)', $word_list_file
-      or die "Cannot open $word_list_file: $!";
+        or die "Cannot open $word_list_file: $!";
 
     # For each line of the word list file
     # (each line should contain only one word)
@@ -93,10 +93,12 @@ sub main {
         # Basic sanity checks
         # Make sure word only has alphanumeric in it
         if ( $word =~ m/[^\w\s]/ ) {
-            if ($verbose) {
-                say
-                  "Not adding $word because it has non-alphanumeric characters in it";
-            }
+
+            # TODO Hide these under more verbose
+            #             if ($verbose) {
+            #                 say
+            #                     "Not adding $word because it has non-alphanumeric characters in it";
+            #             }
             next;
         }
 
@@ -152,7 +154,7 @@ sub main {
     # Make sure requested word length is valid for this word list
     unless ( $min_word_length <= $length && $length <= $max_word_length ) {
         say
-          "For the word list \"$word_list_file\", the length must be between $min_word_length and $max_word_length";
+            "For the word list \"$word_list_file\", the length must be between $min_word_length and $max_word_length";
         $ap->print_usage;
         return 1;
     }
@@ -163,8 +165,8 @@ sub main {
     }
     else {
         # Get a random word from the array of words of length "length"
-        $mnemonic =
-          @{ $words_by_length{$length} }[ rand @{ $words_by_length{$length} } ];
+        $mnemonic = @{ $words_by_length{$length} }
+            [ rand @{ $words_by_length{$length} } ];
 
         say "Random mnemonic word of length $length is \"$mnemonic\"";
     }
@@ -184,17 +186,18 @@ sub main {
         # Find a random word that starts with that grapheme
         if ( exists $words_by_first_grapheme{$grapheme} ) {
             $mnemonic_word = @{ $words_by_first_grapheme{$grapheme} }
-              [ rand @{ $words_by_first_grapheme{$grapheme} } ];
+                [ rand @{ $words_by_first_grapheme{$grapheme} } ];
 
-            $words_that_start_with_this_grapheme =
-              @{ $words_by_first_grapheme{$grapheme} };
+            $words_that_start_with_this_grapheme
+                = @{ $words_by_first_grapheme{$grapheme} };
 
             # TODO Hide these under more verbose
             #             say
             #               "$words_that_start_with_this_grapheme words start with \"$grapheme\""
             #               if $verbose;
 
-            $possible_combinations *= @{ $words_by_first_grapheme{$grapheme} };
+            $possible_combinations
+                *= @{ $words_by_first_grapheme{$grapheme} };
         }
 
         # If we don't have a word that starts with this grapheme just use the grapheme
@@ -211,37 +214,59 @@ sub main {
         #         say "Possible combinations: " . human_number($possible_combinations)
         #           if $verbose;
     }
-
-    # Capitalize each occurence of one letter from the mnemonic in the whole passphrase
-    if ($should_capitalize) {
-
-        # Get a random letter from mnemonic
-        my $letter = $grapheme_array[ rand @grapheme_array ];
-
-        # Capitalize it
-        my $capital_letter = uc($letter);
-        say "Capitalizing $letter->$capital_letter";
-
-        # Replace all occurences in the passphrase
-        s/$letter/$capital_letter/g for @passphrase_array;
+    if ($verbose) {
+        say "It has " . human_number($possible_combinations)
+            . " possible combinations of words using this word list";
     }
 
-    # Tack some numbers on end if requested
+    # Would be better to generate these from the hash of graphemes to accomodate non-english?
+
+    # String to accumulate extra characters
+    my $extra_characters;
+
+    # If user wants to include capital letters in passphrase
+    if ($should_include_capitals) {
+
+        say "Including $should_include_capitals capital letter(s)";
+        my ( $capitals, $combinations )
+            = generate_random_capitals_string($should_include_capitals);
+        $extra_characters .= $capitals;
+        $possible_combinations *= $combinations;
+
+    }
+
+    # If user wants to include numbers in passphrase
     if ($should_include_numbers) {
-        say "Including $should_include_numbers numbers";
-        my ( $numbers, $combinations ) =
-          generate_random_number_string($should_include_numbers);
-        push( @passphrase_array, $numbers );
+        say "Including $should_include_numbers number(s)";
+        my ( $numbers, $combinations )
+            = generate_random_number_string($should_include_numbers);
+        $extra_characters .= $numbers;
         $possible_combinations *= $combinations;
     }
 
-    # Tack some special characters on end if requested
+    # If user wants to include special characters in passphrase
     if ($should_include_special) {
-        say "Including $should_include_special special characters";
-        my ( $specials, $combinations ) =
-          generate_random_specials_string($should_include_special);
-        push( @passphrase_array, $specials );
+        say "Including $should_include_special special character(s)";
+        my ( $specials, $combinations )
+            = generate_random_specials_string($should_include_special);
+        $extra_characters .= $specials;
         $possible_combinations *= $combinations;
+    }
+
+    # If we added some extra characters...
+    if ($extra_characters) {
+        my @gStrArr = split( '', $extra_characters );
+
+        # Shuffle them up
+        fisher_yates_shuffle( \@gStrArr );
+        $extra_characters = join( '', @gStrArr );
+
+        # And add them to the passphrase in random spot
+        my $offset = rand @passphrase_array;
+        splice @passphrase_array, $offset, 0, $extra_characters;
+
+        # Or just add them to the end
+        # push( @passphrase_array, $extra_characters );
     }
 
     # Print out all of the random words to make the passphrase
@@ -255,20 +280,18 @@ sub main {
         my $xkcd         = 'correct battery horse staple';
         my $xkcd_entropy = password_entropy($xkcd);
 
-        say "It has $entropy bits of entropy and "
-          . human_number($possible_combinations)
-          . " possible combinations of words and symbols";
-        say
-          "(For comparison, xkcd passphrase \"$xkcd\" would have $xkcd_entropy bits of entropy)";
+        say "It has "
+            . length($passphrase)
+            . " characters and $entropy bits of entropy (for comparison, xkcd passphrase \"$xkcd\" would have $xkcd_entropy bits of entropy)";
 
         # BUG TODO I have no idea how reasonable this figure is
         my $calcs_per_second = 1_000_000_000;
 
         say "At "
-          . human_number($calcs_per_second)
-          . " attempts per second it would take "
-          . human_time( $possible_combinations / $calcs_per_second )
-          . " to brute force";
+            . human_number($calcs_per_second)
+            . " attempts per second it would take "
+            . human_time( $possible_combinations / $calcs_per_second )
+            . " to brute force";
     }
     return 0;
 }
@@ -366,19 +389,49 @@ sub generate_random_specials_string {
     return ( $random_string, $possible_combinations );
 }
 
+sub generate_random_capitals_string {
+    my $length_of_randomstring = shift;
+
+    my @chars = ( 'A' .. 'Z' );
+    my $random_string;
+    foreach ( 1 .. $length_of_randomstring ) {
+
+        # rand @chars will generate a random
+        # number between 0 and scalar @chars
+        $random_string .= $chars[ rand @chars ];
+    }
+
+    # Calculate the possible combinations of this strength length of these characters
+    my $possible_combinations = @chars**$length_of_randomstring;
+
+    return ( $random_string, $possible_combinations );
+}
+
+sub fisher_yates_shuffle {
+    # Randomly shuffle an array
+    my $array_ref = shift;
+    my $i;
+    for ( $i = @$array_ref; --$i; ) {
+        my $j = int rand( $i + 1 );
+        next if $i == $j;
+        @$array_ref[ $i, $j ] = @$array_ref[ $j, $i ];
+    }
+}
+
 sub process_command_line {
 
     # Set up an argument parser
     my $ap = Getopt::ArgParse->new_parser(
         description =>
-          'Create strong passphrases based on an easy to remember mnemonic word',
+            'Create strong passphrases based on an easy to remember mnemonic word',
         epilog => 'Copyright (C) 2018  Jesse McGraw (jlmcgraw@gmail.com)',
     );
 
     # Add an option
     $ap->add_arg( '--mnemonic', '-m',
         help =>
-          'Supply your own mnemonic word instead of choosing one randomly' );
+            'Supply your own mnemonic word instead of choosing one randomly'
+    );
 
     # Add an option
     $ap->add_arg(
@@ -405,10 +458,18 @@ sub process_command_line {
 
     # Add an option
     $ap->add_arg(
-        '--capitalize', '-c',
-        type => 'Bool',
+        '--capitalize',
+        '-c',
+        choices => sub {
+            if ( $_[0] !~ /^[0-9]*$/gm ) {
+                say "Capitals must be an integer";
+                $ap->print_usage;
+                exit 1;
+            }
+        },
+        default => '0',
         help =>
-          'Capitalize all occurences of one letter from mnemonic in the passphrase'
+            'Add random string of this length of capital letters to passphrase'
     );
 
     # Add an option
@@ -423,8 +484,7 @@ sub process_command_line {
             }
         },
         default => '0',
-        help =>
-          'Add random string of this length of numbers to end of passphrase'
+        help    => 'Add random string of this length of numbers to passphrase'
     );
 
     # Add an option
@@ -440,7 +500,7 @@ sub process_command_line {
             }
         },
         help =>
-          'Add random string of this length of special characters to end of passphrase'
+            'Add random string of this length of special characters to passphrase'
     );
 
     $ap->add_arg(
