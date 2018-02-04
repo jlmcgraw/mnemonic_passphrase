@@ -408,6 +408,7 @@ sub generate_random_capitals_string {
 }
 
 sub fisher_yates_shuffle {
+
     # Randomly shuffle an array
     my $array_ref = shift;
     my $i;
@@ -430,7 +431,7 @@ sub process_command_line {
     # Add an option
     $ap->add_arg( '--mnemonic', '-m',
         help =>
-            'Supply your own mnemonic word instead of choosing one randomly'
+            'Supply your own mnemonic word instead of choosing one randomly (no spaces)'
     );
 
     # Add an option
